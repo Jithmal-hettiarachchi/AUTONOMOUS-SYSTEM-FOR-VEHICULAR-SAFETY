@@ -1,0 +1,21 @@
+# Vehicle Safety Alert System - Core Dependencies
+# Compatible with both Windows and Raspberry Pi
+
+# Computer Vision
+opencv-python>=4.8.0
+numpy>=1.24.0
+
+# Deep Learning Inference
+onnxruntime>=1.16.0
+
+# Audio Playback
+pygame>=2.5.0
+
+# Configuration
+pyyaml>=6.0
+
+# Geometry Operations
+shapely>=2.0.0
+
+# Type hints and validation
+typing-extensions>=4.0.0

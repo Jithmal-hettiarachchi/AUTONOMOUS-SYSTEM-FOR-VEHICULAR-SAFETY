@@ -1,0 +1,14 @@
+# Raspberry Pi Specific Dependencies
+# Install after requirements.txt
+
+# Raspberry Pi Camera
+picamera2>=0.3.12
+
+# GPIO Control
+RPi.GPIO>=0.7.1
+
+# Distributed Pi client (ZMQ to laptop brain)
+pyzmq>=25.1.0
+
+# Include base requirements
+-r requirements.txt

@@ -1,0 +1,8 @@
+# Laptop (Server/Brain) dependencies
+# Heavy inference workload runs here.
+
+numpy>=1.24.0
+opencv-python>=4.8.0
+onnxruntime>=1.16.0
+pyzmq>=25.1.0
+pyyaml>=6.0

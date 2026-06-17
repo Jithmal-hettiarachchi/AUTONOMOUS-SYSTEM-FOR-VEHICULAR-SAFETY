@@ -1,0 +1,7 @@
+# Raspberry Pi (Client/Eyes) dependencies
+# I/O, transport, and GPIO run here.
+
+numpy>=1.24.0
+opencv-python>=4.8.0
+pyzmq>=25.1.0
+RPi.GPIO>=0.7.1

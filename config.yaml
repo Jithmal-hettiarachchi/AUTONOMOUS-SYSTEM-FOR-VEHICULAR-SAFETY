@@ -1,0 +1,261 @@
+# Vehicle Safety Alert System - Configuration
+# This file contains all tunable parameters for the system
+
+system:
+  log_level: INFO
+  log_file: telemetry.jsonl
+  telemetry_flush_interval_s: 1.0
+
+capture:
+  resolution: [640, 480]
+  target_fps: 15
+  timeout_ms: 100
+  reconnect_attempts: 3
+  reconnect_interval_ms: 500
+
+yolo:
+  enabled: true                 # Set to false to disable YOLO detection entirely
+  model_path: models/object.onnx
+  input_size: [640, 640]
+  confidence_threshold: 0.25
+  iou_threshold: 0.45
+  frame_skip: 5
+  cache_ttl_ms: 500
+  # Custom model classes (list index = class id; order must match ONNX head):
+  # 0: vehicle, 1: pedestrian, 2: trafficLight (generic),
+  # 3: trafficLight-Green, 4: trafficLight-Red, 5: trafficLight-Yellow
+  classes:
+    - vehicle
+    - pedestrian
+    - trafficLight
+    - trafficLight-Green
+    - trafficLight-Red
+    - trafficLight-Yellow
+
+lane_detection:
+  roi_top_ratio: 0.55                   # Larger vertical ROI (optimized unified tuning)
+  roi_top_width_ratio: 0.35             # Trapezoid top width (fraction of frame width)
+  roi_bottom_width_ratio: 0.85          # Trapezoid bottom width
+  lane_center_overlap_ratio: 0.25       # How far past center a line may sit for left/right bins
+  horizontal_reject_max_abs_slope: 0.2  # Reject Hough segments flatter than this |dy/dx|
+  vanishing_band_ratio: 0.12            # Allowed |y_intersect - horizon_y| as fraction of height
+  lane_boundary_color_bgr: [0, 255, 0]
+  lane_line_thickness: 6
+  lane_fill_alpha: 0.28
+  debug_roi_color_bgr: [0, 0, 255]
+  debug_hough_color_bgr: [255, 0, 0]
+  lane_lost_message: "LANE LOST"
+  hsv_white:
+    h_min: 0
+    h_max: 180
+    s_min: 0
+    s_max: 35                           # Loosened - allow slightly off-white
+    v_min: 190                          # Loosened - allow moderately bright
+    v_max: 255
+  hsv_yellow:
+    h_min: 15
+    h_max: 35
+    s_min: 80                           # Loosened for yellow
+    s_max: 255
+    v_min: 150
+    v_max: 255
+  gaussian_kernel: [5, 5]               # Smaller blur
+  canny_low: 50
+  canny_high: 150
+  hough_rho: 1
+  hough_theta_deg: 1
+  hough_threshold: 50                   # Balanced
+  hough_min_length: 40                  # Balanced
+  hough_max_gap: 100
+  slope_min: 0.5
+  slope_max: 2.5
+  min_line_length: 40
+  ema_alpha: 0.2
+  max_invalid_frames: 12
+  debug_view: false                     # Enable with --lane-debug for ROI/mask/edges/lines panel
+
+danger_zone:
+  # Trapezoidal danger zone for collision detection
+  # Narrower at top (farther), wider at bottom (closer)
+  # Top edge - narrow, farther objects
+  top_left_x: 0.40
+  top_left_y: 0.78      # Start 78% down frame (shorter zone)
+  top_right_x: 0.60
+  top_right_y: 0.78     # Must match top_left_y!
+  # Bottom edge - wider, closer objects  
+  bottom_left_x: 0.25
+  bottom_left_y: 1.0    # Stick to bottom
+  bottom_right_x: 0.75
+  bottom_right_y: 1.0
+
+alerts:
+  cooldown_ms: 300
+  traffic_light_cooldown_ms: 10000  # Separate longer cooldown for traffic light alerts
+  alert_hold_frames: 5  # How many frames to keep showing an alert on display
+  traffic_light_display_hold_s: 2.0  # How long to show traffic light visual on screen (seconds)
+  sounds:
+    collision: sounds/collision.wav
+    lane_left: sounds/lane_left.wav
+    lane_right: sounds/lane_right.wav
+    red_light: sounds/red_light.wav
+    yellow_light: sounds/yellow_light.wav
+    stop_sign: sounds/stop_sign.wav
+    system_warning: sounds/warning.wav
+
+# Distributed Pi client GPIO (authoritative for Pi_Eyes/pi_client.py — do not change without rewiring)
+pi_client_gpio:
+  traffic_light_green: 22
+  traffic_light_yellow: 27
+  traffic_light_red: 17
+  overtake_mode_switch: 23   # Pull-up input; LOW = overtake mode active
+  # KY-006 passive buzzer module (Signal / VCC / GND) — Signal on GPIO only
+  buzzer: 18                 # Signal (S) → BCM 18 (physical pin 12)
+  buzzer_frequency_hz: 2000  # KY-006 range 1500–2500 Hz (PWM tone, not steady HIGH)
+  buzzer_pwm_duty: 50        # PWM duty % when tone is on
+  # VCC → Pi 3.3V (pin 1/17) or 5V (pin 2/4); GND → any Pi GND
+
+# GPIO Buzzer (standalone src/main.py; same pin as pi_client_gpio.buzzer)
+gpio:
+  enabled: true
+  buzzer_pin: 18
+  buzzer_frequency_hz: 2000
+  buzzer_pwm_duty: 50
+
+# GPIO Status LEDs — standalone src/main.py ONLY (pins 17/27/22 conflict with traffic LEDs on Pi client)
+gpio_leds:
+  enabled: false
+  system_led_pin: 17
+  alert_led_pin: 27
+  collision_output_pin: 22
+  braking_output_pin: 5
+
+# TF-Luna LiDAR Sensor
+lidar:
+  enabled: true
+  port: "/dev/ttyAMA0"  # UART port for TF-Luna
+  baud_rate: 115200
+  ema_alpha: 0.3        # Smoothing factor (0-1, lower = more smoothing)
+  min_strength: 100     # Minimum signal strength for valid reading
+  max_distance_cm: 800  # Maximum valid distance (8 meters)
+  min_distance_cm: 10   # Minimum valid distance (10 cm)
+  
+  # Collision confirmation
+  required_for_collision: true  # If true, collision alerts require LiDAR confirmation
+  collision_threshold_cm: 600   # Distance threshold for collision (6 meters - allows reaction time)
+
+ir_sensor:
+  enabled: false
+  gpio_trigger: 24   # Do not use 23 (reserved for pi_client_gpio.overtake_mode_switch)
+  gpio_echo: 25
+  poll_interval_ms: 100
+  threshold_cm: 50
+
+display:
+  enabled: true
+  # true = borderless fullscreen on the Pi HDMI / primary monitor (recommended on the Pi; use false on a laptop for dev)
+  fullscreen: false
+  window_name: "Driver Assistant"
+  overlay_alpha: 0.6
+  bbox_thickness: 2
+  lane_color: [0, 255, 0]
+  danger_zone_color: [0, 0, 255]
+  font_scale: 0.6
+  show_bbox_labels: true  # Hide text labels on bounding boxes for cleaner look
+
+environment_detection:
+  enabled: true
+  roi:
+    x_min: 0.10
+    x_max: 0.90
+    y_min: 0.35
+    y_max: 0.95
+  # Night cues
+  night_mean_v_enter: 65.0
+  night_mean_v_exit: 85.0
+  night_dark_ratio_enter: 0.55
+  night_dark_ratio_exit: 0.45
+  # Fog cues
+  fog_contrast_enter: 32.0
+  fog_contrast_exit: 42.0
+  fog_edge_density_enter: 0.055
+  fog_edge_density_exit: 0.080
+  fog_sat_mean_enter: 80.0
+  fog_sat_mean_exit: 105.0
+  # Rain cues
+  rain_reflection_enter: 0.060
+  rain_reflection_exit: 0.040
+  rain_streak_enter: 0.060
+  rain_streak_exit: 0.035
+  # Temporal smoothing
+  window_size: 20
+  enter_vote_ratio: 0.70
+  exit_vote_ratio: 0.30
+  # Preprocessing
+  resize_width: 640
+  blur_kernel: 5
+  canny_low: 60
+  canny_high: 150
+  # Night YOLO boost: lower conf, more inference, stronger brighten (inference only)
+  night_yolo_boost_enabled: true
+  night_confidence_threshold: 0.12   # lower = more detections (more false positives)
+  night_iou_threshold: 0.55        # higher = keep more overlapping boxes at night
+  night_frame_skip: 5              # match yolo.frame_skip — every 5th frame at night
+  night_cache_ttl_ms: 200
+  night_dusk_confidence: 0.55      # start boost at dusk before is_night fully latches
+  night_enhance_enabled: true
+  night_clahe_clip_limit: 3.0
+  night_clahe_tile_grid: 8
+  night_gain_alpha: 1.35
+  night_gain_beta: 22
+  night_gamma: 0.72                # <1 brightens (gamma correction after CLAHE)
+
+# Overtake Assistant - Advisory Only Module
+# DISCLAIMER: This is NOT a safety system. Never rely on it for driving decisions.
+overtake_assistant:
+  enabled: true
+  
+  # Traffic side: "left" = drive on left side (overtake on RIGHT) - UK, Japan, India, Sri Lanka, etc.
+  #               "right" = drive on right side (overtake on LEFT) - US, Europe, etc.
+  traffic_side: "left"  # Change to "right" for right-hand traffic countries
+  
+  # Enable conditions - module stays DISABLED if not met
+  min_lane_confidence: 0.3      # Minimum lane polynomial confidence (0.0-1.0)
+  stability_frames: 3           # Frames of stable lanes before evaluation begins
+  
+  # Clearance zone geometry (area to right of our lane for left-hand traffic)
+  zone_width_ratio: 1.5         # Zone width as ratio of our lane width (1.5 lanes wide)
+  zone_y_top_ratio: 0.60        # Top of zone - must be well below roi_top_ratio for stable data
+  
+  # Safe determination - conservative defaults
+  safe_frames_required: 8       # Consecutive safe frames required for SAFE status (increased for safety)
+  
+  # Lane marking detection (broken vs solid line)
+  # Mode options:
+  #   "assume_broken" - Always assume broken line (overtaking allowed)
+  #   "assume_solid"  - Always assume solid line (overtaking not allowed)
+  #   "auto"          - Detect using image pixel analysis (recommended)
+  line_detection_mode: "auto"
+  broken_line_density_threshold: 0.5  # Legacy, not used in auto mode
+  
+  # Image-based line detection parameters (used when mode is "auto")
+  intensity_threshold: 180      # Pixel brightness to consider as "lane marking" (0-255)
+  min_gap_ratio: 0.15           # Minimum gap ratio to classify as broken (0.0-1.0)
+  min_transitions: 2            # Minimum bright-to-dark transitions for broken line
+  
+  # Display colors (BGR format)
+  zone_color_safe: [0, 255, 0]        # Green when SAFE
+  zone_color_unsafe: [0, 165, 255]    # Orange when UNSAFE  
+  zone_color_disabled: [128, 128, 128]  # Gray when DISABLED
+  
+  # Indicator position on screen
+  indicator_position: [20, 100]
+
+# Direct Ethernet (Pi <-> laptop) for ZMQ distributed mode: static IPv4 on 192.168.1.0/24.
+# OS network config is manual; pi_client default --server-ip matches laptop_ipv4 below.
+distributed_network:
+  laptop_ipv4: 192.168.1.1
+  pi_ipv4: 192.168.1.2
+  subnet_mask: 255.255.255.0
+  # Pi (Bookworm, dhcpcd): append to /etc/dhcpcd.conf then sudo systemctl restart dhcpcd
+  #   interface eth0
+  #   static ip_address=192.168.1.2/24
