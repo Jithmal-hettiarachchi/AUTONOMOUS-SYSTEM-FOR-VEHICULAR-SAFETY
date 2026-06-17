@@ -160,7 +160,7 @@ A real-time driver assistance system that detects road hazards, lane departures,
 Clone the repository once on each machine that needs it:
 
 ```bash
-git clone https://github.com/jithmalhettiarachchi71-debug/Driver-Assistant-Distributed.git
+git clone https://github.com/Jithmal-hettiarachchi/AUTONOMOUS-SYSTEM-FOR-VEHICULAR-SAFETY.git
 cd Driver-Assistant-Distributed
 ```
 
